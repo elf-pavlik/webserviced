@@ -21,17 +21,41 @@ daemon.use(cookieSession({ secret: config.secrets.session })); //FIXME CSRF
 
 daemon.post('/auth/login', function(req, res){
   if(_.contains(config.audiences, req.headers.origin)){
+
+    // persona verify
     request.post('https://verifier.login.persona.org/verify')
       .send({
         assertion: req.body.assertion,
         audience: req.headers.origin
       })
-      .end(function(vres){ //FIXME extract into function
+      .end(function(pres){ //FIXME extract into function
 
         // start session
-        req.session.agent = vres.body;
+        req.session.agent = {};
+        req.session.agent.persona = pres.body;
 
-        res.json(vres.body);
+        var email = pres.body.email;
+        var domain = email.split('@')[1];
+
+        // webfinger
+        request.get('http://' + domain + '/.well-known/webfinger')
+          .query({ resource: 'acct:' + email })
+          .end(function(wres){
+            req.session.agent.webfinger = wres.body;
+
+            // profile
+            var profileURL = _.select(wres.body.links, function(link){
+              return link.rel === 'http://webfinger.net/rel/profile-page';
+            })[0].href;
+
+            request.get(profileURL)
+              .accept('application/json')
+              .end(function(profileRes){
+                req.session.agent.profile = profileRes.body;
+                res.json(req.session.agent);
+              });
+          });
+
       });
   } else {
     res.send(403);
