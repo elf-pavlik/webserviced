@@ -27,6 +27,7 @@ daemon.use(cookieSession({ secret: config.secrets.session })); //FIXME CSRF
  */
 
 function verifyPersona(assertion, origin){
+  console.log(assertion);
   return new Promise(function(resolve, reject) {
     request.post('https://verifier.login.persona.org/verify')
       .send({
@@ -219,6 +220,7 @@ daemon.get('/edit/:fileName', function(req, res){
   if(!page.uuid) page.uuid = uuid.v4();
   var padUri = etherpadPad + page.uuid;
   console.log(page);
+  // FIXME handle *errors* in graceful way!
   request.get(etherpadApi + 'createPad').query({
     apikey: '3ee47370501d01403aaaf2274f7dafd1b2307d5eb579b2afd82daa1e204c44f6',
     padID: page.uuid,
@@ -231,6 +233,10 @@ daemon.get('/edit/:fileName', function(req, res){
       console.log('requesting pad creation error', response.errors);
     }
   });
+});
+
+daemon.get('/save/:fileName', function(req, res){
+  console.log('save');
 });
 
 daemon.get('/uuid/:fileName', function(req, res){
